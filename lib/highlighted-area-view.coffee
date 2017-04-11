@@ -90,6 +90,9 @@ class HighlightedAreaView
       activeItem = pane.activeItem
       activeItem if activeItem and activeItem.constructor.name == 'TextEditor'
 
+  escapeRegExp1: (str) =>
+    return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&")
+
   handleSelection: =>
     @removeMarkers()
 
@@ -105,37 +108,30 @@ class HighlightedAreaView
 
     @selections = editor.getSelections()
 
-    text = escapeRegExp(@selections[0].getText())
-    regex = new RegExp("\\S*\\w*\\b", 'gi')
-    result = regex.exec(text)
+    text = @escapeRegExp1(@selections[0].getText())
 
-    return unless result?
-    return if result[0].length < atom.config.get(
-      'highlight-selected.minimumLength') or
-              result.index isnt 0 or
-              result[0] isnt result.input
+    return if text.length < atom.config.get('highlight-selected.minimumLength')
 
     regexFlags = 'g'
     if atom.config.get('highlight-selected.ignoreCase')
       regexFlags = 'gi'
 
     @ranges = []
-    regexSearch = result[0]
 
     if atom.config.get('highlight-selected.onlyHighlightWholeWords')
-      if regexSearch.indexOf("\$") isnt -1 \
+      if text.indexOf("\$") isnt -1 \
       and editor.getGrammar()?.name in ['PHP', 'HACK']
-        regexSearch = regexSearch.replace("\$", "\$\\b")
+        text = text.replace("\$", "\$\\b")
       else
-        regexSearch =  "\\b" + regexSearch
-      regexSearch = regexSearch + "\\b"
+        text =  "\\b" + text
+      text = text + "\\b"
 
     @resultCount = 0
     if atom.config.get('highlight-selected.highlightInPanes')
       @getActiveEditors().forEach (editor) =>
-        @highlightSelectionInEditor(editor, regexSearch, regexFlags)
+        @highlightSelectionInEditor(editor, text, regexFlags)
     else
-      @highlightSelectionInEditor(editor, regexSearch, regexFlags)
+      @highlightSelectionInEditor(editor, text, regexFlags)
 
     @statusBarElement?.updateCount(@resultCount)
 
